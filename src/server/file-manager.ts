@@ -51,10 +51,18 @@ export class GoogleAIFileManager {
    * Upload a file.
    */
   async uploadFile(
-    filePath: string,
+    file: string | Blob,
     fileMetadata: FileMetadata,
   ): Promise<UploadFileResponse> {
-    const file = readFileSync(filePath);
+    let fileContent: Blob;
+    if (typeof file === 'string') {
+      fileContent = new Blob([readFileSync(file)]);
+    } else if (file instanceof Blob) {
+      fileContent = file;
+    } else {
+      throw new GoogleGenerativeAIRequestInputError("File must be a file path string or a Blob.");
+    }
+
     const url = new FilesRequestUrl(
       RpcTask.UPLOAD,
       this.apiKey,
@@ -86,7 +94,7 @@ export class GoogleAIFileManager {
       fileMetadata.mimeType +
       "\r\n\r\n";
     const postBlobPart = "\r\n--" + boundary + "--";
-    const blob = new Blob([preBlobPart, file, postBlobPart]);
+    const blob = new Blob([preBlobPart, fileContent, postBlobPart]);
 
     const response = await makeServerRequest(url, uploadHeaders, blob);
     return response.json();
